@@ -16,6 +16,7 @@ CLASSES = {
 }
 MARGIN = "  "
 WIDTH = 60
+RESULTS_LIMIT = 10
 
 
 def printRule():
@@ -144,7 +145,7 @@ class App:
         channelCount = 0
         videoCount = 0
 
-        for i in map(lambda x: Munch(x), jsonData):
+        for i in map(lambda x: Munch(x), jsonData[:RESULTS_LIMIT]):
             if i.type == "channel":
                 channelCount += 1
                 results.append(Channel(i))
