@@ -8,7 +8,6 @@ from textwrap import wrap, shorten
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import FormattedText
-from itertools import zip_longest
 
 
 def getVarInConfig(var):
