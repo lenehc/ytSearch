@@ -32,6 +32,6 @@ Instances
   26   youtube.owacon.moe
 
 
-Note        Place "{^}" before a filter in config.json
+Note        Set a filter's value to 1 in config.json
             to mark it as case-insensitive
-            (ex: "{^}drake")
+            (ex: "'drake': 1")
