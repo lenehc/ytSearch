@@ -1,0 +1,19 @@
+{
+    "invidiousInstance": 2,
+    "blockedVideoTitles": [
+    ],
+    "blockedChannelNames": [
+    ],
+    "blockedChannelIds": [
+    ],
+    "ui": {
+        "margin": 3,
+        "width": 60,
+        "resultsLimit": 10,
+        "textColor": {
+            "gray1": "#8e8e93",
+            "gray2": "#636366",
+            "gray3": "#48484a"
+        }
+    }
+}

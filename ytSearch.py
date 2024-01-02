@@ -1,22 +1,49 @@
 import requests
 import sys
+import json
+import re
 
 from munch import Munch
 from textwrap import wrap, shorten
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import FormattedText
+from itertools import zip_longest
 
 
-INV_INSTANCES = ["yewtu.be", "vid.puffyan.us", "yt.artemislena.eu", "invidious.projectsegfau.lt", "invidious.slipfox.xyz", "invidious.privacydev.net", "vid.priv.au", "iv.melmac.space", "iv.ggtyler.dev", "invidious.lunar.icu", "inv.zzls.xyz", "inv.tux.pizza", "invidious.protokolla.fi", "iv.nboeck.de", "invidious.private.coffee", "yt.drgnz.club", "iv.datura.network", "invidious.fdn.fr", "invidious.perennialte.ch", "yt.cdaut.de", "invidious.drgns.space", "inv.us.projectsegfau.lt", "invidious.einfachzocken.eu", "invidious.nerdvpn.de", "inv.n8pjl.ca", "youtube.owacon.moe"]
-CLASSES = {
-    'gray': '#8e8e93',
-    'gray2' : '#636366',
-    'gray3': '#48484a',
-}
-MARGIN = "  "
-WIDTH = 60
-RESULTS_LIMIT = 10
+def getVarInConfig(var):
+    with open("config.json", "r") as file:
+        config =  json.load(file)
+
+    keys = var.split(".")
+    currentKey = config
+
+    for idx, key in enumerate(keys):
+        try:
+            currentKey = currentKey[key]
+        except KeyError:
+            print(f"Missing \"{'.'.join(keys[:idx+1])}\" in config.json")
+            sys.exit(1)
+
+    return currentKey
+
+
+INVIDIOUS_INSTANCES = ["yewtu.be", "vid.puffyan.us", "yt.artemislena.eu", "invidious.projectsegfau.lt", "invidious.slipfox.xyz", "invidious.privacydev.net", "vid.priv.au", "iv.melmac.space", "iv.ggtyler.dev", "invidious.lunar.icu", "inv.zzls.xyz", "inv.tux.pizza", "invidious.protokolla.fi", "iv.nboeck.de", "invidious.private.coffee", "yt.drgnz.club", "iv.datura.network", "invidious.fdn.fr", "invidious.perennialte.ch", "yt.cdaut.de", "invidious.drgns.space", "inv.us.projectsegfau.lt", "invidious.einfachzocken.eu", "invidious.nerdvpn.de", "inv.n8pjl.ca", "youtube.owacon.moe"]
+
+TEXT_COLOR = getVarInConfig("ui.textColor")
+MARGIN = getVarInConfig("ui.margin") * " "
+WIDTH = getVarInConfig("ui.width")
+RESULTS_LIMIT = getVarInConfig("ui.resultsLimit")
+
+try:
+    SELECTED_INSTANCE = INVIDIOUS_INSTANCES[getVarInConfig("invidiousInstance")]
+except IndexError:
+    print("Invalid invidious instance in config.json")
+    sys.exit(1)
+
+BLOCKED_VIDEO_TITLES = getVarInConfig("blockedVideoTitles")
+BLOCKED_CHANNEL_NAMES = getVarInConfig("blockedChannelNames")
+BLOCKED_CHANNEL_IDS = getVarInConfig("blockedChannelIds")
 
 
 def printRule():
@@ -24,18 +51,22 @@ def printRule():
 
 
 def printError(error):
-    printLn([("gray", error)])
+    printLn([("gray1", error)])
 
 
 def printUsage():
     print()
-    printLn([("gray", "Usage       [instance] search [term]")])
-    printLn([("gray", "                 ―     channel [id]")])
+    printLn([("gray1", "Usage       [instance] search [term]")])
+    printLn([("gray1", "                 ―     channel [id]")])
     printRule()
-    printLn([("gray", "Instances")])
+    printLn([("gray1", "Instances")])
     print()
-    for idx, instance in enumerate(INV_INSTANCES):
-        printLn([("gray", f'  {str(idx+1).rjust(2).ljust(4)} {instance}')])
+    for idx, instance in enumerate(INVIDIOUS_INSTANCES):
+        printLn([("gray1", f'  {str(idx+1).rjust(2).ljust(4)} {instance}')])
+    printRule()
+    printLn([("gray1", "Note        Place \"{^}\" before a filter in config.json")])
+    printLn([("gray1", "            to mark it as case-insensitive")])
+    printLn([("gray1", "            (ex: \"{^}drake\")")])
     printRule()
 
 
@@ -61,7 +92,7 @@ def printLn(items, margin=True, **kwargs):
     marginStr = MARGIN if margin else ""
     print_formatted_text(
             FormattedText([("", marginStr)] + [(f'class:{className}', line) for className, line in items]),
-            style=Style.from_dict(CLASSES),
+            style=Style.from_dict(TEXT_COLOR),
             **kwargs,
         )
 
@@ -82,7 +113,7 @@ class Channel:
         for block in blocks:
             printLn([("", block)])
 
-        printLn([("gray", self.subCount)])
+        printLn([("gray1", self.subCount)])
         printLn([("gray3", f'[{self.channelHandle}][{self.channelId}]'.rjust(WIDTH))])
         printRule()
 
@@ -115,21 +146,41 @@ class Video:
         for block in blocks:
             printLn([("", block)])
 
-        printLn([("gray", self.videoInfo())])
+        printLn([("gray1", self.videoInfo())])
         printLn([("gray2", f'({self.videoLength})'), ("gray3", f'[{self.videoId}][{self.channelId}]'.rjust(WIDTH-len(self.videoLength)-2))])
         printRule()
 
 
 class App:
-    def __init__(self, instanceIdx):
-        self.instance = INV_INSTANCES[instanceIdx]
+    def __init__(self):
+        pass
+
+    def _matchFilter(self, filters, string):
+        for filter in filters:
+            if filter.startswith("{^}"):
+                if re.compile(filter[3:], re.IGNORECASE).search(string):
+                    return True
+            elif re.search(filter, string):
+                return True
+        return False
 
     def filterResults(self, results):
-        return results
+        filteredResults = []
+
+        for i in results:
+            if self._matchFilter(BLOCKED_CHANNEL_IDS, i.channelId) or self._matchFilter(BLOCKED_CHANNEL_NAMES, i.channelName):
+                continue
+            if type(i) == Video:
+                if self._matchFilter(BLOCKED_VIDEO_TITLES, i.videoTitle):
+                    continue
+
+            filteredResults.append(i)
+
+        return filteredResults
 
     def queryApi(self, query):
         try:
-            jsonData = requests.get(f"https://{self.instance}/api/v1/{query}").json()
+            jsonData = requests.get(f"https://{SELECTED_INSTANCE}/api/v1/{query}").json()
 
             if type(jsonData) == dict and jsonData.get("error"):
                 printError("No results")
@@ -137,7 +188,7 @@ class App:
 
             return jsonData
         except Exception as e:
-            printLn([("gray", f"Unable to establish a connection to \"{self.instance}\"")])
+            printLn([("gray1", f"Unable to establish a connection to \"{SELECTED_INSTANCE}\"")])
             sys.exit()
 
     def renderResults(self, jsonData):
@@ -147,17 +198,21 @@ class App:
 
         for i in map(lambda x: Munch(x), jsonData[:RESULTS_LIMIT]):
             if i.type == "channel":
-                channelCount += 1
                 results.append(Channel(i))
             elif i.type == "video":
-                videoCount += 1
                 results.append(Video(i))
 
+        results = self.filterResults(results)
+
         if not results:
-            printLn("No results")
+            printError("No results")
             sys.exit(1)
-        
-        self.filterResults(results)
+
+        for i in results:
+            if type(i) == Channel:
+                channelCount += 1
+            elif type(i) == Video:
+                videoCount += 1
 
         channelCountText = "channel" if channelCount == 1 else "channels"
         videoCountText = "video" if videoCount == 1 else "videos"
@@ -173,7 +228,7 @@ class App:
             text = videoCountText
 
         print()
-        printLn([("gray", text)])
+        printLn([("gray1", text)])
         printRule()
 
         for i in results:
@@ -191,23 +246,20 @@ class App:
 def main():
     args = sys.argv[1:]
 
-    if len(args) < 3:
+    if len(args) < 2:
         printUsage()
         sys.exit(1)
 
-    instanceIndex, command, *params = args
+    command, *params = args
 
-    if instanceIndex.isdigit():
-        idx = int(instanceIndex)-1
-        if idx < len(INV_INSTANCES):
-            app = App(idx)
+    app = App()
 
-            if command == "search":
-                app.search(params)
-                sys.exit(0)
-            elif command == "channel":
-                app.listChannelVideos(params[0])
-                sys.exit(0)
+    if command == "search":
+        app.search(params)
+        sys.exit(0)
+    elif command == "channel":
+        app.listChannelVideos(params[0])
+        sys.exit(0)
 
     printUsage()
     sys.exit(1)
