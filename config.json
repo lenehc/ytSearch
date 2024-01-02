@@ -1,10 +1,13 @@
 {
     "invidiousInstance": 2,
-    "blockedVideoTitles": [
-    ],
-    "blockedChannelNames": [
-    ],
+    "blockedVideoTitles": {
+        "toosie slide": 1
+    },
+    "blockedChannelNames": {
+        "drake": 0
+    },
     "blockedChannelIds": [
+        "UCByOQJjav0CUDwxCk-jVNRQ"
     ],
     "ui": {
         "margin": 3,

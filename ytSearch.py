@@ -63,9 +63,9 @@ def printUsage():
     for idx, instance in enumerate(INVIDIOUS_INSTANCES):
         printLn([("gray1", f'  {str(idx+1).rjust(2).ljust(4)} {instance}')])
     printRule()
-    printLn([("gray1", "Note        Place \"{^}\" before a filter in config.json")])
+    printLn([("gray1", "Note        Set a filter's value to 1 in config.json")])
     printLn([("gray1", "            to mark it as case-insensitive")])
-    printLn([("gray1", "            (ex: \"{^}drake\")")])
+    printLn([("gray1", "            (ex: \"\'drake\': 1\")")])
     printRule()
 
 
@@ -154,20 +154,25 @@ class App:
     def __init__(self):
         pass
 
-    def _matchFilter(self, filters, string):
-        for filter in filters:
-            if filter.startswith("{^}"):
-                if re.compile(filter[3:], re.IGNORECASE).search(string):
+    def _matchFilter(self, filters, string, regEx=True):
+        if regEx:
+            for filter, modNum in filters.items():
+                if modNum == 1:
+                    if re.compile(filter, re.IGNORECASE).search(string):
+                        return True
+                elif re.search(filter, string):
                     return True
-            elif re.search(filter, string):
-                return True
+        else:
+            for filter in filters:
+                if string == filter:
+                    return True
         return False
 
     def filterResults(self, results):
         filteredResults = []
 
         for i in results:
-            if self._matchFilter(BLOCKED_CHANNEL_IDS, i.channelId) or self._matchFilter(BLOCKED_CHANNEL_NAMES, i.channelName):
+            if self._matchFilter(BLOCKED_CHANNEL_IDS, i.channelId, regEx=False) or self._matchFilter(BLOCKED_CHANNEL_NAMES, i.channelName):
                 continue
             if type(i) == Video:
                 if self._matchFilter(BLOCKED_VIDEO_TITLES, i.videoTitle):
