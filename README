@@ -30,3 +30,8 @@ Instances
   24   invidious.nerdvpn.de
   25   inv.n8pjl.ca
   26   youtube.owacon.moe
+
+
+Note        Place "{^}" before a filter in config.json
+            to mark it as case-insensitive
+            (ex: "{^}drake")
