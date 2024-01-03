@@ -3,11 +3,14 @@ import sys
 import json
 import re
 
-from munch import Munch
 from textwrap import wrap, shorten
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import FormattedText
+
+
+class ValidateConfig:
+    pass
 
 
 def getVarInConfig(var):
@@ -32,13 +35,9 @@ INVIDIOUS_INSTANCES = ['yewtu.be', 'vid.puffyan.us', 'yt.artemislena.eu', 'invid
 TEXT_COLOR = getVarInConfig('ui.textColor')
 MARGIN = getVarInConfig('ui.margin') * ' '
 WIDTH = getVarInConfig('ui.width')
-RESULTS_LIMIT = getVarInConfig('ui.resultsLimit')
-
-try:
-    SELECTED_INSTANCE = INVIDIOUS_INSTANCES[getVarInConfig('invidiousInstance')]
-except IndexError:
-    print('Invalid invidious instance in config.json')
-    sys.exit(1)
+SEARCH_RESULTS_LIMIT = getVarInConfig('ui.searchResultsLimit')
+CHANNEL_VIDEOS_LIMIT = getVarInConfig('ui.channelVideosLimit')
+SELECTED_INSTANCE = INVIDIOUS_INSTANCES[getVarInConfig('invidiousInstance')-1]
 
 BLOCKED_VIDEO_TITLES = getVarInConfig('blockedVideoTitles')
 BLOCKED_CHANNEL_NAMES = getVarInConfig('blockedChannelNames')
@@ -55,17 +54,13 @@ def printError(error):
 
 def printUsage():
     print()
-    printLn([('gray1', 'Usage        search [term]')])
+    printLn([('gray1', 'Usage       search [term]')])
     printLn([('gray1', '            channel [id]')])
     printRule()
     printLn([('gray1', 'Instances')])
     print()
     for idx, instance in enumerate(INVIDIOUS_INSTANCES):
         printLn([('gray1', '  {} {}'.format(str(idx+1).rjust(2).ljust(4), instance))])
-    printRule()
-    printLn([('gray1', 'Note        Set a filter\'s value to 1 in config.json')])
-    printLn([('gray1', '            to mark it as case-insensitive')])
-    printLn([('gray1', '            (ex: \"\'drake\': 1\")')])
     printRule()
 
 
@@ -96,48 +91,58 @@ def printLn(items, margin=True, **kwargs):
         )
 
 
+def get(destDict, key, defaultValue=''):
+    value = destDict.get(key, defaultValue)
+    if value == None:
+        return defaultValue
+    return value
+
+
 class Channel:
-    def __init__(self, dataObj):
-        self.channelName = dataObj.author
-        self.channelId = dataObj.authorId
-        self.channelHandle = dataObj.channelHandle
-        self.subCount = formatCount(dataObj.subCount)
-        self.subCount += ' subscriber' if self.subCount == '1' else ' subscribers'
-        self.channelVerified = dataObj.authorVerified
+    def __init__(self, jsonData):
+        self.channelName = get(jsonData, 'author')
+        self.channelId = get(jsonData, 'authorId')
+        self.channelHandle = get(jsonData, 'channelHandle')
+        self.subCount = get(jsonData, 'subCount', 0)
+        self.subCountText = formatCount(self.subCount)
+        self.subCountText += ' subscriber' if self.subCount == '1' else ' subscribers'
+        self.channelVerified = get(jsonData, 'authorVerified', False)
+        self.channelVerifiedText = ' ✓' if self.channelVerified else ''
 
     def render(self):
-        channelVerified = ' ✓' if self.channelVerified else ''
-        blocks = wrap(self.channelName + channelVerified, width=WIDTH)
+        blocks = wrap(self.channelName + self.channelVerifiedText, width=WIDTH)
 
         for block in blocks:
             printLn([('', block)])
 
-        printLn([('gray1', self.subCount)])
+        printLn([('gray1', self.subCountText)])
         printLn([('gray3', '[{}][{}]'.format(self.channelHandle, self.channelId).rjust(WIDTH))])
         printRule()
 
 
 class Video:
-    def __init__(self, dataObj):
-        self.videoId = dataObj.videoId
-        self.videoTitle = dataObj.title
-        self.channelId = dataObj.authorId
-        self.channelName = dataObj.author
-        self.channelVerified = dataObj.authorVerified
-        self.viewCount = dataObj.viewCountText
-        self.published = dataObj.publishedText
-        self.videoLength = formatVideoLength(dataObj.lengthSeconds)
+    def __init__(self, jsonData):
+        self.videoId = get(jsonData, 'videoId')
+        self.videoTitle = get(jsonData, 'title')
+        self.channelId = get(jsonData, 'authorId')
+        self.channelName = get(jsonData, 'author')
+        self.channelVerified = get(jsonData, 'authorVerified', False)
+        self.channelVerifiedText = ' ✓' if self.channelVerified else ''
+        self.viewCountText = get(jsonData, 'viewCountText', '0 views')
+        self.publishedText = get(jsonData, 'publishedText', '0 seconds ago')
+        self.videoLength = get(jsonData, 'lengthSeconds', 0)
+        self.videoLengthText = formatVideoLength(self.videoLength)
 
     def videoInfo(self):
-        meta = f'{self.viewCount} · {self.published}'
+        meta = '{} · {}'.format(self.viewCountText, self.publishedText)
         channelNameWidth = WIDTH-len(meta)-4
+
         if channelNameWidth > 0:
             channelName = shorten(self.channelName, width=channelNameWidth, placeholder='…')
         else:
             channelName = '…'
-        if self.channelVerified:
-            channelName += ' ✓'
-        return '{}    {}'.format(channelName.ljust(channelNameWidth), meta)
+
+        return '{}    {}'.format('{}{}'.format(channelName, self.channelVerifiedText).ljust(channelNameWidth), meta)
 
     def render(self):
         blocks = wrap(self.videoTitle, width=WIDTH, max_lines=2, placeholder='…')
@@ -146,7 +151,7 @@ class Video:
             printLn([('', block)])
 
         printLn([('gray1', self.videoInfo())])
-        printLn([('gray2', '({})'.format(self.videoLength)), ('gray3', '[{}][{}]'.format(self.videoId, self.channelId).rjust(WIDTH-len(self.videoLength)-2))])
+        printLn([('gray2', '({})'.format(self.videoLengthText)), ('gray3', '[{}][{}]'.format(self.videoId, self.channelId).rjust(WIDTH-len(self.videoLengthText)-2))])
         printRule()
 
 
@@ -156,8 +161,8 @@ class App:
 
     def _matchFilter(self, filters, string, regEx=True):
         if regEx:
-            for filter, modNum in filters.items():
-                if modNum == 1:
+            for filter, ignoreCase in filters.items():
+                if ignoreCase:
                     if re.compile(filter, re.IGNORECASE).search(string):
                         return True
                 elif re.search(filter, string):
@@ -182,28 +187,31 @@ class App:
 
         return filteredResults
 
-    def queryApi(self, query):
+    def queryApi(self, query, onFail=None):
         try:
             jsonData = requests.get('https://{}/api/v1/{}'.format(SELECTED_INSTANCE, query)).json()
-
-            if type(jsonData) == dict and jsonData.get('error'):
-                printError('No results')
-                sys.exit(1)
-
-            return jsonData
         except:
-            printLn([('gray1', f'Unable to establish a connection to \"{SELECTED_INSTANCE}\"')])
-            sys.exit()
+            printLn([('gray1', 'Unable to establish a connection to \"{}\"'.format(SELECTED_INSTANCE))])
+            sys.exit(1)
+            
+        if type(jsonData) == dict and jsonData.get('error'):
+            if onFail:
+                printError(onFail)
+            else:
+                printError('No results')
+            sys.exit(1)
+
+        return jsonData
 
     def renderResults(self, jsonData):
         results = []
         channelCount = 0
         videoCount = 0
 
-        for i in map(lambda x: Munch(x), jsonData[:RESULTS_LIMIT]):
-            if i.type == 'channel':
+        for i in jsonData:
+            if i['type'] == 'channel':
                 results.append(Channel(i))
-            elif i.type == 'video':
+            elif i['type'] == 'video':
                 results.append(Video(i))
 
         results = self.filterResults(results)
@@ -220,12 +228,12 @@ class App:
 
         channelCountText = 'channel' if channelCount == 1 else 'channels'
         videoCountText = 'video' if videoCount == 1 else 'videos'
-        channelCountText = f'{channelCount} {channelCountText}'
-        videoCountText = f'{videoCount} {videoCountText}'
+        channelCountText = '{} {}'.format(channelCount, channelCountText)
+        videoCountText = '{} {}'.format(videoCount, videoCountText)
         text = ''
 
         if channelCount and videoCount:
-            text = f'{channelCountText}, {videoCountText}'
+            text = '{}, {}'.format(channelCountText, videoCountText)
         elif channelCount:
             text = channelCountText
         elif videoCount:
@@ -238,13 +246,47 @@ class App:
         for i in results:
             i.render()
 
+    def _addResultsToDict(self, results, destDict):
+        for i in results:
+            if i['type'] == 'video':
+                destDict[i['videoId']] = i
+            elif i['type'] == 'channel':
+                destDict[i['authorId']] = i
+
     def search(self, term):
-        jsonData = self.queryApi(f'search?q={term}')
-        self.renderResults(jsonData)
+        initialJsonData = self.queryApi('search?q={}'.format(term))
+
+        results = {}
+        currentPage = 1
+
+        self._addResultsToDict(initialJsonData[:SEARCH_RESULTS_LIMIT], results)
+
+        while len(results) < SEARCH_RESULTS_LIMIT:
+            jsonData = self.queryApi('search?q={}&page={}'.format(term, currentPage))
+            self._addResultsToDict(jsonData[:SEARCH_RESULTS_LIMIT-len(results)], results)
+            currentPage += 1
+
+        self.renderResults(results.values())
 
     def listChannelVideos(self, channelId):
-        jsonData = self.queryApi(f'channels/{channelId}/videos')
-        self.renderResults(jsonData['videos'])
+        jsonChannelData = self.queryApi('channels/{}'.format(channelId), onFail='Invalid channel ID \"{}\"'.format(channelId))
+        channel = Channel(jsonChannelData)
+
+        print()
+        printRule()
+        printLn([('', channel.channelName + channel.channelVerifiedText)])
+        printLn([('gray2', channel.subCountText)])
+
+        initialJsonData = self.queryApi('channels/{}/videos'.format(channelId))
+        videos = initialJsonData['videos'][:CHANNEL_VIDEOS_LIMIT]
+        continuation = initialJsonData.get('continuation')
+
+        while continuation and len(videos) < CHANNEL_VIDEOS_LIMIT:
+            jsonVideoData = self.queryApi('channels/{}/videos?continuation={}'.format(channelId, continuation))
+            videos += jsonVideoData['videos'][:CHANNEL_VIDEOS_LIMIT-len(videos)]
+            continuation = jsonVideoData.get('continuation')
+        
+        self.renderResults(videos)
     
 
 def main():

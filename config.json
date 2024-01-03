@@ -1,18 +1,19 @@
 {
     "invidiousInstance": 2,
     "blockedVideoTitles": {
-        "toosie slide": 1
+        "toosie slide": true
     },
     "blockedChannelNames": {
-        "drake": 0
+        "drake": true
     },
     "blockedChannelIds": [
         "UCByOQJjav0CUDwxCk-jVNRQ"
     ],
     "ui": {
         "margin": 3,
-        "width": 60,
-        "resultsLimit": 10,
+        "width": 45,
+        "searchResultsLimit": 10,
+        "channelVideosLimit": 10,
         "textColor": {
             "gray1": "#8e8e93",
             "gray2": "#636366",
