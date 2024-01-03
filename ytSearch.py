@@ -184,14 +184,14 @@ class App:
 
     def queryApi(self, query):
         try:
-            jsonData = requests.get('https://{SELECTED_INSTANCE}/api/v1/{}'.format(query)).json()
+            jsonData = requests.get('https://{}/api/v1/{}'.format(SELECTED_INSTANCE, query)).json()
 
             if type(jsonData) == dict and jsonData.get('error'):
                 printError('No results')
                 sys.exit(1)
 
             return jsonData
-        except Exception as e:
+        except:
             printLn([('gray1', f'Unable to establish a connection to \"{SELECTED_INSTANCE}\"')])
             sys.exit()
 
