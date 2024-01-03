@@ -11,61 +11,61 @@ from prompt_toolkit.formatted_text import FormattedText
 
 
 def getVarInConfig(var):
-    with open("config.json", "r") as file:
+    with open('config.json', 'r') as file:
         config =  json.load(file)
 
-    keys = var.split(".")
+    keys = var.split('.')
     currentKey = config
 
     for idx, key in enumerate(keys):
         try:
             currentKey = currentKey[key]
         except KeyError:
-            print(f"Missing \"{'.'.join(keys[:idx+1])}\" in config.json")
+            print('Missing \"{}\" in config.json'.format('.'.join(keys[:idx+1])))
             sys.exit(1)
 
     return currentKey
 
 
-INVIDIOUS_INSTANCES = ["yewtu.be", "vid.puffyan.us", "yt.artemislena.eu", "invidious.projectsegfau.lt", "invidious.slipfox.xyz", "invidious.privacydev.net", "vid.priv.au", "iv.melmac.space", "iv.ggtyler.dev", "invidious.lunar.icu", "inv.zzls.xyz", "inv.tux.pizza", "invidious.protokolla.fi", "iv.nboeck.de", "invidious.private.coffee", "yt.drgnz.club", "iv.datura.network", "invidious.fdn.fr", "invidious.perennialte.ch", "yt.cdaut.de", "invidious.drgns.space", "inv.us.projectsegfau.lt", "invidious.einfachzocken.eu", "invidious.nerdvpn.de", "inv.n8pjl.ca", "youtube.owacon.moe"]
+INVIDIOUS_INSTANCES = ['yewtu.be', 'vid.puffyan.us', 'yt.artemislena.eu', 'invidious.projectsegfau.lt', 'invidious.slipfox.xyz', 'invidious.privacydev.net', 'vid.priv.au', 'iv.melmac.space', 'iv.ggtyler.dev', 'invidious.lunar.icu', 'inv.zzls.xyz', 'inv.tux.pizza', 'invidious.protokolla.fi', 'iv.nboeck.de', 'invidious.private.coffee', 'yt.drgnz.club', 'iv.datura.network', 'invidious.fdn.fr', 'invidious.perennialte.ch', 'yt.cdaut.de', 'invidious.drgns.space', 'inv.us.projectsegfau.lt', 'invidious.einfachzocken.eu', 'invidious.nerdvpn.de', 'inv.n8pjl.ca', 'youtube.owacon.moe']
 
-TEXT_COLOR = getVarInConfig("ui.textColor")
-MARGIN = getVarInConfig("ui.margin") * " "
-WIDTH = getVarInConfig("ui.width")
-RESULTS_LIMIT = getVarInConfig("ui.resultsLimit")
+TEXT_COLOR = getVarInConfig('ui.textColor')
+MARGIN = getVarInConfig('ui.margin') * ' '
+WIDTH = getVarInConfig('ui.width')
+RESULTS_LIMIT = getVarInConfig('ui.resultsLimit')
 
 try:
-    SELECTED_INSTANCE = INVIDIOUS_INSTANCES[getVarInConfig("invidiousInstance")]
+    SELECTED_INSTANCE = INVIDIOUS_INSTANCES[getVarInConfig('invidiousInstance')]
 except IndexError:
-    print("Invalid invidious instance in config.json")
+    print('Invalid invidious instance in config.json')
     sys.exit(1)
 
-BLOCKED_VIDEO_TITLES = getVarInConfig("blockedVideoTitles")
-BLOCKED_CHANNEL_NAMES = getVarInConfig("blockedChannelNames")
-BLOCKED_CHANNEL_IDS = getVarInConfig("blockedChannelIds")
+BLOCKED_VIDEO_TITLES = getVarInConfig('blockedVideoTitles')
+BLOCKED_CHANNEL_NAMES = getVarInConfig('blockedChannelNames')
+BLOCKED_CHANNEL_IDS = getVarInConfig('blockedChannelIds')
 
 
 def printRule():
-    printLn([("gray3", "".ljust(WIDTH + len(MARGIN), "—"))], margin=False)
+    printLn([('gray3', ''.ljust(WIDTH + len(MARGIN), '—'))], margin=False)
 
 
 def printError(error):
-    printLn([("gray1", error)])
+    printLn([('gray1', error)])
 
 
 def printUsage():
     print()
-    printLn([("gray1", "Usage       [instance] search [term]")])
-    printLn([("gray1", "                 ―     channel [id]")])
+    printLn([('gray1', 'Usage        search [term]')])
+    printLn([('gray1', '            channel [id]')])
     printRule()
-    printLn([("gray1", "Instances")])
+    printLn([('gray1', 'Instances')])
     print()
     for idx, instance in enumerate(INVIDIOUS_INSTANCES):
-        printLn([("gray1", f'  {str(idx+1).rjust(2).ljust(4)} {instance}')])
+        printLn([('gray1', '  {} {}'.format(str(idx+1).rjust(2).ljust(4), instance))])
     printRule()
-    printLn([("gray1", "Note        Set a filter's value to 1 in config.json")])
-    printLn([("gray1", "            to mark it as case-insensitive")])
-    printLn([("gray1", "            (ex: \"\'drake\': 1\")")])
+    printLn([('gray1', 'Note        Set a filter\'s value to 1 in config.json')])
+    printLn([('gray1', '            to mark it as case-insensitive')])
+    printLn([('gray1', '            (ex: \"\'drake\': 1\")')])
     printRule()
 
 
@@ -83,14 +83,14 @@ def formatVideoLength(delta):
     hours, minutes = divmod(minutes, 60)
 
     if delta > 3600:
-        return f'{hours}:{str(minutes).zfill(2)}:{str(seconds).zfill(2)}'
-    return f'{minutes}:{str(seconds).zfill(2)}'
+        return '{}:{}:{}'.format(hours, str(minutes).zfill(2), str(seconds).zfill(2))
+    return '{}:{}'.format(minutes, str(seconds).zfill(2))
 
 
 def printLn(items, margin=True, **kwargs):
-    marginStr = MARGIN if margin else ""
+    marginStr = MARGIN if margin else ''
     print_formatted_text(
-            FormattedText([("", marginStr)] + [(f'class:{className}', line) for className, line in items]),
+            FormattedText([('', marginStr)] + [('class:{}'.format(className), line) for className, line in items]),
             style=Style.from_dict(TEXT_COLOR),
             **kwargs,
         )
@@ -102,18 +102,18 @@ class Channel:
         self.channelId = dataObj.authorId
         self.channelHandle = dataObj.channelHandle
         self.subCount = formatCount(dataObj.subCount)
-        self.subCount += " subscriber" if self.subCount == "1" else " subscribers"
+        self.subCount += ' subscriber' if self.subCount == '1' else ' subscribers'
         self.channelVerified = dataObj.authorVerified
 
     def render(self):
-        channelVerified = " ✓" if self.channelVerified else ""
+        channelVerified = ' ✓' if self.channelVerified else ''
         blocks = wrap(self.channelName + channelVerified, width=WIDTH)
 
         for block in blocks:
-            printLn([("", block)])
+            printLn([('', block)])
 
-        printLn([("gray1", self.subCount)])
-        printLn([("gray3", f'[{self.channelHandle}][{self.channelId}]'.rjust(WIDTH))])
+        printLn([('gray1', self.subCount)])
+        printLn([('gray3', '[{}][{}]'.format(self.channelHandle, self.channelId).rjust(WIDTH))])
         printRule()
 
 
@@ -129,24 +129,24 @@ class Video:
         self.videoLength = formatVideoLength(dataObj.lengthSeconds)
 
     def videoInfo(self):
-        meta = f"{self.viewCount} · {self.published}"
+        meta = f'{self.viewCount} · {self.published}'
         channelNameWidth = WIDTH-len(meta)-4
         if channelNameWidth > 0:
-            channelName = shorten(self.channelName, width=channelNameWidth, placeholder="…")
+            channelName = shorten(self.channelName, width=channelNameWidth, placeholder='…')
         else:
-            channelName = "…"
+            channelName = '…'
         if self.channelVerified:
-            channelName += " ✓"
-        return f'{channelName.ljust(channelNameWidth)}    {meta}'
+            channelName += ' ✓'
+        return '{}    {}'.format(channelName.ljust(channelNameWidth), meta)
 
     def render(self):
-        blocks = wrap(self.videoTitle, width=WIDTH, max_lines=2, placeholder="…")
+        blocks = wrap(self.videoTitle, width=WIDTH, max_lines=2, placeholder='…')
 
         for block in blocks:
-            printLn([("", block)])
+            printLn([('', block)])
 
-        printLn([("gray1", self.videoInfo())])
-        printLn([("gray2", f'({self.videoLength})'), ("gray3", f'[{self.videoId}][{self.channelId}]'.rjust(WIDTH-len(self.videoLength)-2))])
+        printLn([('gray1', self.videoInfo())])
+        printLn([('gray2', '({})'.format(self.videoLength)), ('gray3', '[{}][{}]'.format(self.videoId, self.channelId).rjust(WIDTH-len(self.videoLength)-2))])
         printRule()
 
 
@@ -184,15 +184,15 @@ class App:
 
     def queryApi(self, query):
         try:
-            jsonData = requests.get(f"https://{SELECTED_INSTANCE}/api/v1/{query}").json()
+            jsonData = requests.get('https://{SELECTED_INSTANCE}/api/v1/{}'.format(query)).json()
 
-            if type(jsonData) == dict and jsonData.get("error"):
-                printError("No results")
+            if type(jsonData) == dict and jsonData.get('error'):
+                printError('No results')
                 sys.exit(1)
 
             return jsonData
         except Exception as e:
-            printLn([("gray1", f"Unable to establish a connection to \"{SELECTED_INSTANCE}\"")])
+            printLn([('gray1', f'Unable to establish a connection to \"{SELECTED_INSTANCE}\"')])
             sys.exit()
 
     def renderResults(self, jsonData):
@@ -201,15 +201,15 @@ class App:
         videoCount = 0
 
         for i in map(lambda x: Munch(x), jsonData[:RESULTS_LIMIT]):
-            if i.type == "channel":
+            if i.type == 'channel':
                 results.append(Channel(i))
-            elif i.type == "video":
+            elif i.type == 'video':
                 results.append(Video(i))
 
         results = self.filterResults(results)
 
         if not results:
-            printError("No results")
+            printError('No results')
             sys.exit(1)
 
         for i in results:
@@ -218,11 +218,11 @@ class App:
             elif type(i) == Video:
                 videoCount += 1
 
-        channelCountText = "channel" if channelCount == 1 else "channels"
-        videoCountText = "video" if videoCount == 1 else "videos"
+        channelCountText = 'channel' if channelCount == 1 else 'channels'
+        videoCountText = 'video' if videoCount == 1 else 'videos'
         channelCountText = f'{channelCount} {channelCountText}'
         videoCountText = f'{videoCount} {videoCountText}'
-        text = ""
+        text = ''
 
         if channelCount and videoCount:
             text = f'{channelCountText}, {videoCountText}'
@@ -232,19 +232,19 @@ class App:
             text = videoCountText
 
         print()
-        printLn([("gray1", text)])
+        printLn([('gray1', text)])
         printRule()
 
         for i in results:
             i.render()
 
     def search(self, term):
-        jsonData = self.queryApi(f"search?q={term}")
+        jsonData = self.queryApi(f'search?q={term}')
         self.renderResults(jsonData)
 
     def listChannelVideos(self, channelId):
-        jsonData = self.queryApi(f"channels/{channelId}/videos")
-        self.renderResults(jsonData["videos"])
+        jsonData = self.queryApi(f'channels/{channelId}/videos')
+        self.renderResults(jsonData['videos'])
     
 
 def main():
@@ -258,10 +258,10 @@ def main():
 
     app = App()
 
-    if command == "search":
+    if command == 'search':
         app.search(params)
         sys.exit(0)
-    elif command == "channel":
+    elif command == 'channel':
         app.listChannelVideos(params[0])
         sys.exit(0)
 
@@ -269,5 +269,5 @@ def main():
     sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
