@@ -1,47 +1,152 @@
+"""
+TODO: docstrings, usage text
+"""
+
 import requests
 import sys
-import json
 import re
 
+from json import load, JSONDecodeError
+from jsonschema import validate
 from textwrap import wrap, shorten
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import FormattedText
 
 
-class ValidateConfig:
-    pass
-
-
-def getVarInConfig(var):
-    with open('config.json', 'r') as file:
-        config =  json.load(file)
-
-    keys = var.split('.')
-    currentKey = config
-
-    for idx, key in enumerate(keys):
-        try:
-            currentKey = currentKey[key]
-        except KeyError:
-            print('Missing \"{}\" in config.json'.format('.'.join(keys[:idx+1])))
-            sys.exit(1)
-
-    return currentKey
-
-
 INVIDIOUS_INSTANCES = ['yewtu.be', 'vid.puffyan.us', 'yt.artemislena.eu', 'invidious.projectsegfau.lt', 'invidious.slipfox.xyz', 'invidious.privacydev.net', 'vid.priv.au', 'iv.melmac.space', 'iv.ggtyler.dev', 'invidious.lunar.icu', 'inv.zzls.xyz', 'inv.tux.pizza', 'invidious.protokolla.fi', 'iv.nboeck.de', 'invidious.private.coffee', 'yt.drgnz.club', 'iv.datura.network', 'invidious.fdn.fr', 'invidious.perennialte.ch', 'yt.cdaut.de', 'invidious.drgns.space', 'inv.us.projectsegfau.lt', 'invidious.einfachzocken.eu', 'invidious.nerdvpn.de', 'inv.n8pjl.ca', 'youtube.owacon.moe']
 
-TEXT_COLOR = getVarInConfig('ui.textColor')
-MARGIN = getVarInConfig('ui.margin') * ' '
-WIDTH = getVarInConfig('ui.width')
-SEARCH_RESULTS_LIMIT = getVarInConfig('ui.searchResultsLimit')
-CHANNEL_VIDEOS_LIMIT = getVarInConfig('ui.channelVideosLimit')
-SELECTED_INSTANCE = INVIDIOUS_INSTANCES[getVarInConfig('invidiousInstance')-1]
 
-BLOCKED_VIDEO_TITLES = getVarInConfig('blockedVideoTitles')
-BLOCKED_CHANNEL_NAMES = getVarInConfig('blockedChannelNames')
-BLOCKED_CHANNEL_IDS = getVarInConfig('blockedChannelIds')
+class Config:
+    def __init__(self):
+        self._errorPrefix = 'Unable to parse config.json: '
+        self.jsonSchema = {
+            'type': 'object',
+            'properties': {
+                'invidiousInstance': {
+                    'type': 'integer',
+                    'minimum': 1,
+                    'maximum': len(INVIDIOUS_INSTANCES)
+                },
+                'blockedVideoTitles': {
+                    'type': 'object',
+                    'patternProperties': {
+                        '^.*$': {
+                            'type': 'boolean'
+                        }
+                    },
+                    'additionalProperties': False
+                },
+                'blockedChannelNames': {
+                    'type': 'object',
+                    'patternProperties': {
+                        '^.*$': {
+                            'type': 'boolean'
+                        }
+                    },
+                    'additionalProperties': False
+                },
+                'blockedChannelIds': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'string'
+                    }
+                },
+                'ui': {
+                    'type': 'object',
+                    'properties': {
+                        'margin': {
+                            'type': 'integer',
+                            'minimum': 0
+                        },
+                        'width': {
+                            'type': 'integer',
+                            'minimum': 45
+                        },
+                        'searchResultsLimit': {
+                            'type': 'integer',
+                            'minimum': 1
+                        },
+                        'channelVideosLimit': {
+                            'type': 'integer',
+                            'minimum': 1
+                        },
+                        'textColor': {
+                            'type': 'object',
+                            'properties': {
+                                'gray1': {
+                                    'type': 'string',
+                                    'pattern': '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+                                },
+                                'gray2': {
+                                    'type': 'string',
+                                    'pattern': '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+                                },
+                                'gray3': {
+                                    'type': 'string',
+                                    'pattern': '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+                                }
+                            },
+                            'required': ['gray1', 'gray2', 'gray3']
+                        }
+                    },
+                    'required': ['margin', 'width', 'searchResultsLimit', 'channelVideosLimit', 'textColor']
+                }
+            },
+            'required': ['invidiousInstance', 'blockedVideoTitles', 'blockedChannelNames', 'blockedChannelIds', 'ui']
+        }
+
+        with open('config.json', 'r') as file:
+            try:
+                self.jsonConfig = load(file)
+            except JSONDecodeError as error:
+                print('{}{} (Line: {}, Column: {})'.format(self._errorPrefix, error.msg, error.lineno, error.colno))
+                sys.exit(1)
+
+    def _validateRegEx(self, keyNames):
+        for keyName in keyNames:
+            for filter in self.jsonConfig[keyName]:
+                try:
+                    re.compile(filter)
+                except re.error:
+                    print('{}\'{}\': \'{}\' is not a valid regular expression'.format(self._errorPrefix, keyName, filter))
+                    return False
+        return True
+
+    def validate(self):
+        try:
+            validate(instance=self.jsonConfig, schema=self.jsonSchema)
+        except Exception as error:
+            if error.absolute_path:
+                absPath = str(error.absolute_path[0])
+                for node in list(error.absolute_path)[1:]:
+                    absPath += '.{}'.format(node) if type(node) == str else '[{}]'.format(node)
+            else:
+                absPath = ''
+
+
+            errorMessage = '\'{}\': {}'.format(absPath, error.message) if absPath else error.message
+            print('{}{}'.format(self._errorPrefix, errorMessage))
+            return False
+
+        return self._validateRegEx(['blockedVideoTitles', 'blockedChannelNames'])
+
+
+CONFIG = Config()
+CONFIG.validate()
+CONFIG = CONFIG.jsonConfig
+
+SELECTED_INSTANCE = INVIDIOUS_INSTANCES[CONFIG['invidiousInstance']-1]
+
+BLOCKED_VIDEO_TITLES = CONFIG['blockedVideoTitles']
+BLOCKED_CHANNEL_NAMES = CONFIG['blockedChannelNames']
+BLOCKED_CHANNEL_IDS = CONFIG['blockedChannelIds']
+
+MARGIN = CONFIG['ui']['margin'] * ' '
+WIDTH = CONFIG['ui']['width']
+TEXT_COLOR = CONFIG['ui']['textColor']
+SEARCH_RESULTS_LIMIT = CONFIG['ui']['searchResultsLimit']
+CHANNEL_VIDEOS_LIMIT = CONFIG['ui']['channelVideosLimit']
 
 
 def printRule():
@@ -187,7 +292,7 @@ class App:
 
         return filteredResults
 
-    def queryApi(self, query, onFail=None):
+    def queryApi(self, query, noResultsText='No results'):
         try:
             jsonData = requests.get('https://{}/api/v1/{}'.format(SELECTED_INSTANCE, query)).json()
         except:
@@ -195,15 +300,12 @@ class App:
             sys.exit(1)
             
         if type(jsonData) == dict and jsonData.get('error'):
-            if onFail:
-                printError(onFail)
-            else:
-                printError('No results')
+            printError(noResultsText)
             sys.exit(1)
 
         return jsonData
 
-    def renderResults(self, jsonData):
+    def renderResults(self, jsonData, noResultsText='No results'):
         results = []
         channelCount = 0
         videoCount = 0
@@ -217,7 +319,7 @@ class App:
         results = self.filterResults(results)
 
         if not results:
-            printError('No results')
+            printError(noResultsText)
             sys.exit(1)
 
         for i in results:
@@ -269,7 +371,7 @@ class App:
         self.renderResults(results.values())
 
     def listChannelVideos(self, channelId):
-        jsonChannelData = self.queryApi('channels/{}'.format(channelId), onFail='Invalid channel ID \"{}\"'.format(channelId))
+        jsonChannelData = self.queryApi('channels/{}'.format(channelId), noResultsText='Invalid channel ID \"{}\"'.format(channelId))
         channel = Channel(jsonChannelData)
 
         print()
@@ -286,7 +388,7 @@ class App:
             videos += jsonVideoData['videos'][:CHANNEL_VIDEOS_LIMIT-len(videos)]
             continuation = jsonVideoData.get('continuation')
         
-        self.renderResults(videos)
+        self.renderResults(videos, noResultsText='')
     
 
 def main():

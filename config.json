@@ -11,9 +11,9 @@
     ],
     "ui": {
         "margin": 3,
-        "width": 45,
+        "width": 50,
         "searchResultsLimit": 10,
-        "channelVideosLimit": 10,
+        "channelVideosLimit": 500,
         "textColor": {
             "gray1": "#8e8e93",
             "gray2": "#636366",
