@@ -1,7 +1,7 @@
 {
     "invidiousInstance": 2,
     "blockedVideoTitles": {
-        "toosie slide": true
+        "toosie slide": false
     },
     "blockedChannelNames": {
         "drake": true

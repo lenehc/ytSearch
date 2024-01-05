@@ -1,37 +1,85 @@
-Usage       [instance] search [term]
-                 ―     channel [id]
+   Usage
 
+        search    Search for channels and videos sorted by
+                  relevance. Arguments: "search
+                  [searchTerm]", searchTerm is required.
+                  Example "search toosie slide"
 
-Instances
+       channel    List all videos from a channel sorted by
+                  date published. Arguments: "channel
+                  [channelId]", channelId is required.
+                  Example "channel UCByOQJjav0CUDwxCk-
+                  jVNRQ"
+—————————————————————————————————————————————————————
+   Instances
 
-   1   yewtu.be
-   2   vid.puffyan.us
-   3   yt.artemislena.eu
-   4   invidious.projectsegfau.lt
-   5   invidious.slipfox.xyz
-   6   invidious.privacydev.net
-   7   vid.priv.au
-   8   iv.melmac.space
-   9   iv.ggtyler.dev
-  10   invidious.lunar.icu
-  11   inv.zzls.xyz
-  12   inv.tux.pizza
-  13   invidious.protokolla.fi
-  14   iv.nboeck.de
-  15   invidious.private.coffee
-  16   yt.drgnz.club
-  17   iv.datura.network
-  18   invidious.fdn.fr
-  19   invidious.perennialte.ch
-  20   yt.cdaut.de
-  21   invidious.drgns.space
-  22   inv.us.projectsegfau.lt
-  23   invidious.einfachzocken.eu
-  24   invidious.nerdvpn.de
-  25   inv.n8pjl.ca
-  26   youtube.owacon.moe
+      1   yewtu.be
+      2   vid.puffyan.us
+      3   yt.artemislena.eu
+      4   invidious.projectsegfau.lt
+      5   invidious.slipfox.xyz
+      6   invidious.privacydev.net
+      7   vid.priv.au
+      8   iv.melmac.space
+      9   iv.ggtyler.dev
+     10   invidious.lunar.icu
+     11   inv.zzls.xyz
+     12   inv.tux.pizza
+     13   invidious.protokolla.fi
+     14   iv.nboeck.de
+     15   invidious.private.coffee
+     16   yt.drgnz.club
+     17   iv.datura.network
+     18   invidious.fdn.fr
+     19   invidious.perennialte.ch
+     20   yt.cdaut.de
+     21   invidious.drgns.space
+     22   inv.us.projectsegfau.lt
+     23   invidious.einfachzocken.eu
+     24   invidious.nerdvpn.de
+     25   inv.n8pjl.ca
+     26   youtube.owacon.moe
+—————————————————————————————————————————————————————
+   Config
 
+             invidiousInstance    The number corresponding to the
+                                  invidious instance that you want to use,
+                                  see the table above for a list of
+                                  available instances. Example: 2
 
-Note        Set a filter's value to 1 in config.json
-            to mark it as case-insensitive
-            (ex: "'drake': 1")
+            blockedVideoTitles    A dictionary of regex patterns, any
+                                  video whose title matches a pattern will
+                                  not be shown. To mark the filter as
+                                  case-insensitive add a value of "true",
+                                  else "false". Example: { "toosie slide":
+                                  false }
+
+           blockedChannelNames    A dictionary of regex patterns, any
+                                  channel whose names matches a pattern
+                                  will not be shown. To mark the filter as
+                                  case-insensitive add a value of "true",
+                                  else "false". Example: { "drake": true }
+
+             blockedChannelIds    A list of strings, any channel whose ID
+                                  matches a string will not be shown.
+                                  Example: [ "UCByOQJjav0CUDwxCk-jVNRQ" ]
+
+                     ui.margin    The number of spaces to prefix each line
+                                  of text with. Example: 3
+
+                      ui.width    The maxiumum number of columns that a
+                                  line should be before being wrapped.
+                                  Example: 50
+
+         ui.searchResultsLimit    The maximum number of search results
+                                  (videos and channels) to show. Example:
+                                  10
+
+         ui.channelVideosLimit    The maximum number of a channel's videos
+                                  to show (when using command "channel").
+                                  Example: 500
+
+           ui.textColor.gray1,    Hex color codes in string format used to
+           ui.textColor.gray2,    color the interface. Example: "#8e8e93"
+            ui.textColor.gray3    
+—————————————————————————————————————————————————————
