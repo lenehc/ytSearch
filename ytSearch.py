@@ -1,7 +1,3 @@
-"""
-TODO: docstrings, usage text
-"""
-
 import requests
 import sys
 import re
@@ -9,7 +5,7 @@ import re
 from itertools import zip_longest
 from json import load, JSONDecodeError
 from jsonschema import validate
-from textwrap import wrap, shorten
+from textwrap import wrap
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import FormattedText
